@@ -12,13 +12,20 @@ import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
 import scala.concurrent.ExecutionContext
 
-object HelloServer extends IOApp {
+object CountCharactersServer extends IOApp {
 
   private def countCharacters(s: String): IO[Either[Unit, Int]] =
     IO.pure(Right[Unit, Int](s.length))
 
   private val countCharactersEndpoint: PublicEndpoint[String, Unit, Int, Any] =
-    endpoint.in(stringBody).out(plainBody[Int])
+    endpoint
+      .in(
+        stringBody
+            .description("Text to count characters of")
+            .example("AWESOME")
+      )
+      .out(plainBody[Int])
+
   private val countCharactersServerEndpoint: ServerEndpoint[Any, IO] =
     countCharactersEndpoint.serverLogic(countCharacters)
 
@@ -28,9 +35,6 @@ object HelloServer extends IOApp {
       "Hello API",
       "1.0.0"
     )
-
-  implicit val ec: ExecutionContext =
-    scala.concurrent.ExecutionContext.Implicits.global
 
   private val routes = Http4sServerInterpreter[IO]().toRoutes(
     docEndpoints :+ countCharactersServerEndpoint
@@ -47,8 +51,9 @@ object HelloServer extends IOApp {
       .build
       .use { server =>
         for {
+          uri <- IO.pure(server.baseUri)
           _ <- IO.println(
-            s"Go to http://localhost:${server.address.getPort}/docs to open SwaggerUI. Press ENTER key to exit."
+            s"Go to ${uri}docs to open SwaggerUI. Press ENTER key to exit."
           )
           _ <- IO.readLine
         } yield ()
